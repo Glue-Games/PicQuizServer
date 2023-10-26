@@ -1,0 +1,11 @@
+name: nakama-1
+data_dir: "./data/"
+logger:
+  stdout: false
+  level: "warn"
+  file: "/nakama/data/logfile.log"
+console:
+  port: 7351
+social:
+  apple:
+    bundle_id: "com.GlueGames.PicQuiz"

@@ -19,6 +19,8 @@ services:
     build: .
     depends_on:
       - postgres
+    volumes:
+      - ./data:/nakama/data
     entrypoint:
       - "/bin/sh"
       - "-ecx"
