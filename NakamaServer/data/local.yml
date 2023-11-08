@@ -1,4 +1,4 @@
-name: nakama-1
+name: nakama-node-1
 data_dir: "./data/"
 logger:
   stdout: false
@@ -9,5 +9,3 @@ console:
 social:
   apple:
     bundle_id: "com.GlueGames.PicQuiz"
-google_auth:
-  credentials_json: '{"web":{"client_id":"359627840041-mlikcl0oj2tj37k2mivlrsj0rkoj16tc.apps.googleusercontent.com","project_id":"picquiz-puzzle-game","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"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","redirect_uris":["https://siararisa-public.s3.ap-southeast-1.amazonaws.com/GlueGames/index.html"]}}'
