@@ -73,6 +73,7 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
         let playerNumber: number = getPlayerNumber(gameState.players, presence.sessionId);
         delete gameState.players[playerNumber];
     }
+
     if (getPlayersCount(gameState.players) == 0)
         return null;
 
@@ -110,6 +111,7 @@ function processMatchLoop(gameState: GameState, nakama: nkruntime.Nakama, dispat
 {
     switch (gameState.scene)
     {
+        case Scene.Game: matchLoopBattle(gameState, nakama, dispatcher); break;
         case Scene.Lobby: matchLoopLobby(gameState, nakama, dispatcher); break;
     }
 }
@@ -124,6 +126,7 @@ function matchLoopBattle(gameState: GameState, nakama: nkruntime.Nakama, dispatc
             gameState.roundDeclaredWins = [];
             gameState.roundDeclaredDraw = [];
             gameState.countdown = DurationRoundResults * TickRate;
+            gameState.scene = Scene.Lobby;
             dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
         }
     }

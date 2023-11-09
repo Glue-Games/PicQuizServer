@@ -1,9 +1,8 @@
 "use strict";
-// let InitModule: nkruntime.InitModule =
 const JoinOrCreateMatchRpc = "JoinOrCreateMatchRpc";
+const LogicLoadedLoggerInfo = "Custom logic loaded.";
 const MatchModuleName = "match";
 function InitModule(ctx, logger, nk, initializer) {
-    initializer.registerRpc('healthcheck', rpcHealthCheck);
     initializer.registerRpc(JoinOrCreateMatchRpc, joinOrCreateMatch);
     initializer.registerMatch(MatchModuleName, {
         matchInit,
@@ -14,7 +13,7 @@ function InitModule(ctx, logger, nk, initializer) {
         matchTerminate,
         matchSignal
     });
-    logger.info("Hello World!");
+    logger.info(LogicLoadedLoggerInfo);
 }
 let joinOrCreateMatch = function (context, logger, nakama, payload) {
     let matches;
@@ -109,6 +108,9 @@ function messagesDefaultLogic(message, gameState, dispatcher) {
 }
 function processMatchLoop(gameState, nakama, dispatcher, logger) {
     switch (gameState.scene) {
+        case 4 /* Scene.Game */:
+            matchLoopBattle(gameState, nakama, dispatcher);
+            break;
         case 3 /* Scene.Lobby */:
             matchLoopLobby(gameState, nakama, dispatcher);
             break;
@@ -121,6 +123,7 @@ function matchLoopBattle(gameState, nakama, dispatcher) {
             gameState.roundDeclaredWins = [];
             gameState.roundDeclaredDraw = [];
             gameState.countdown = DurationRoundResults * TickRate;
+            gameState.scene = 3 /* Scene.Lobby */;
             dispatcher.broadcastMessage(4 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
     }
@@ -244,7 +247,3 @@ const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
 const MessagesLogic = {};
-function rpcHealthCheck(ctx, logger, nk, payload) {
-    logger.info("rpcHealthCheck called");
-    return JSON.stringify({ success: true });
-}

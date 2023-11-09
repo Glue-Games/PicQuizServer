@@ -1,9 +1,9 @@
-// let InitModule: nkruntime.InitModule =
 const JoinOrCreateMatchRpc = "JoinOrCreateMatchRpc";
+const LogicLoadedLoggerInfo = "Custom logic loaded.";
 const MatchModuleName = "match";
 
-function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
-    initializer.registerRpc('healthcheck', rpcHealthCheck);
+function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer)
+{
     initializer.registerRpc(JoinOrCreateMatchRpc, joinOrCreateMatch);
     initializer.registerMatch(MatchModuleName, {
         matchInit,
@@ -14,5 +14,6 @@ function InitModule(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkrunt
         matchTerminate,
         matchSignal
     });
-    logger.info("Hello World!");
+
+    logger.info(LogicLoadedLoggerInfo);
 }
