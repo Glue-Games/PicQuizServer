@@ -5,8 +5,7 @@
     "./src/match_handler.ts",
     "./src/interfaces.ts",
     "./src/enums.ts",
-    "./src/constants.ts",
-    "./healthcheck.ts"
+    "./src/constants.ts"
   ],
   "compilerOptions": {
     "target": "es2016",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
