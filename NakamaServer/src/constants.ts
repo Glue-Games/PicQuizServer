@@ -1,6 +1,6 @@
 
 const TickRate = 16;
-const DurationLobby = 10;
+const DurationLobby = 30;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
@@ -11,5 +11,5 @@ const KeyTrophies = "Trophies";
 
 const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) => void } =
 {
-
+    3: matchStart
 }

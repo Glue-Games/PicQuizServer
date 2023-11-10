@@ -42,12 +42,18 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
         let player: Player =
         {
             presence: presence,
-            displayName: account.user.displayName
+            displayName: account.user.displayName,
+            avatar: account.user.avatarUrl,
+            isHost: false
         }
-
         let nextPlayerNumber: number = getNextPlayerNumber(gameState.players);
         gameState.players[nextPlayerNumber] = player;
         gameState.playersWins[nextPlayerNumber] = 0;
+        if(getPlayersCount(gameState.players) > 0)
+        {
+            player.isHost = gameState.players[0].presence.sessionId == player.presence.sessionId;
+            gameState.players[nextPlayerNumber] = player;
+        }
         dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(player), presencesOnMatch);
         presencesOnMatch.push(presence);
     }
@@ -68,14 +74,28 @@ let matchLoop: nkruntime.MatchLoopFunction = function (context: nkruntime.Contex
 let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, tick: number, state: nkruntime.MatchState, presences: nkruntime.Presence[])
 {
     let gameState = state as GameState;
+    let hostLeft: boolean = false;
     for (let presence of presences)
     {
         let playerNumber: number = getPlayerNumber(gameState.players, presence.sessionId);
+        let leftPlayer: Player = gameState.players[playerNumber];
+        if(leftPlayer.isHost)
+            hostLeft = true;
         delete gameState.players[playerNumber];
     }
-
     if (getPlayersCount(gameState.players) == 0)
         return null;
+    else if(hostLeft)
+    {
+        let nextPlayerNumber: number = getFirstPlayerNumber(gameState.players);
+        if(nextPlayerNumber > 0)
+        {
+            let nextHost: Player = gameState.players[nextPlayerNumber]
+            nextHost.isHost = true;
+            logger.info("Host changed");
+            dispatcher.broadcastMessage(OperationCode.HostChanged, JSON.stringify(nextHost), presences);
+        }
+    }
 
     return { state: gameState };
 }
@@ -137,12 +157,7 @@ function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatch
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 1)
     {
         gameState.countdown--;
-        if (gameState.countdown == 0)
-        {
-            gameState.scene = Scene.Game;
-            dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
-            dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
-        }
+        //Add bots here
     }
 }
 
@@ -190,6 +205,13 @@ function matchLoopRoundResults(gameState: GameState, nakama: nkruntime.Nakama, d
             dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
         }
     }
+}
+
+function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void
+{
+    gameState.scene = Scene.Game;
+    dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
+    dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
 }
 
 function playerWon(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama): void 
@@ -271,11 +293,27 @@ function getPlayerNumber(players: Player[], sessionId: string): number
     return PlayerNotFound;
 }
 
+function isFirstPlayer(players: Player[]): boolean
+{
+    if (players.length === 1) 
+        return true;
+    else 
+        return false;
+}
 
 function getNextPlayerNumber(players: Player[]): number
 {
     for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
         if (!playerNumberIsUsed(players, playerNumber))
+            return playerNumber;
+
+    return PlayerNotFound;
+}
+
+function getFirstPlayerNumber(players: Player[]): number
+{
+    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
+        if (playerNumberIsUsed(players, playerNumber))
             return playerNumber;
 
     return PlayerNotFound;

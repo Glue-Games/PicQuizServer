@@ -11,7 +11,10 @@ const enum OperationCode
 {
     Players = 0,
     PlayerJoined = 1,
-    PlayerInput = 2,
-    PlayerWon = 3,
-    ChangeScene = 4
+    HostChanged = 2,
+    StartMatch = 3,
+    GameLoaded = 4,
+    PlayerInput = 5,
+    PlayerWon = 6,
+    ChangeScene = 7 
 }

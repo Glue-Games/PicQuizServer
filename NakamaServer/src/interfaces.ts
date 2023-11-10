@@ -18,6 +18,8 @@ interface Player
 {
     presence: nkruntime.Presence
     displayName: string
+    avatar: string
+    isHost: boolean
 }
 
 interface TimeRemainingData
