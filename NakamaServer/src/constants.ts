@@ -11,5 +11,6 @@ const KeyTrophies = "Trophies";
 
 const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) => void } =
 {
-    3: matchStart
+    3: matchStart,
+    4: gameLoaded
 }

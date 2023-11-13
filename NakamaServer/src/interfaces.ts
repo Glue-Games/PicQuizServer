@@ -6,6 +6,7 @@ interface MatchLabel
 interface GameState
 {
     players: Player[]
+    loaded: boolean[]
     playersWins: number[]
     roundDeclaredWins: number[][]
     roundDeclaredDraw: number[]
@@ -20,6 +21,7 @@ interface Player
     displayName: string
     avatar: string
     isHost: boolean
+    playerNumber: number
 }
 
 interface TimeRemainingData

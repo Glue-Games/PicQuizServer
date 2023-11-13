@@ -10,11 +10,12 @@ const enum Scene
 const enum OperationCode
 {
     Players = 0,
-    PlayerJoined = 1,
-    HostChanged = 2,
-    StartMatch = 3,
-    GameLoaded = 4,
-    PlayerInput = 5,
-    PlayerWon = 6,
-    ChangeScene = 7 
+    PlayerJoined = 1,       // raised when a player joins the match
+    HostChanged = 2,        // raised when a host disconnected and is replaced
+    StartMatch = 3,         // raised the host starts the game
+    GameLoaded = 4,         // raised when a player from the match has loaded the game scene
+    GameReady = 5,          // raised when all players are ready to load the game
+    PlayerInput = 6,
+    PlayerWon = 7,
+    ChangeScene = 8 
 }

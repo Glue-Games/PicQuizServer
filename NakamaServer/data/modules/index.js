@@ -29,6 +29,7 @@ let matchInit = function (context, logger, nakama, params) {
     var label = { open: true };
     var gameState = {
         players: [],
+        loaded: [],
         playersWins: [],
         roundDeclaredWins: [[]],
         roundDeclaredDraw: [],
@@ -62,15 +63,19 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
             presence: presence,
             displayName: account.user.displayName,
             avatar: account.user.avatarUrl,
-            isHost: false
+            isHost: false,
+            playerNumber: -1
         };
         let nextPlayerNumber = getNextPlayerNumber(gameState.players);
         gameState.players[nextPlayerNumber] = player;
+        gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
         if (getPlayersCount(gameState.players) > 0) {
             player.isHost = gameState.players[0].presence.sessionId == player.presence.sessionId;
-            gameState.players[nextPlayerNumber] = player;
         }
+        player.playerNumber = nextPlayerNumber;
+        //Make sure to refresh the player data 
+        gameState.players[nextPlayerNumber] = player;
         dispatcher.broadcastMessage(1 /* OperationCode.PlayerJoined */, JSON.stringify(player), presencesOnMatch);
         presencesOnMatch.push(presence);
     }
@@ -143,7 +148,7 @@ function matchLoopBattle(gameState, nakama, dispatcher) {
             gameState.roundDeclaredDraw = [];
             gameState.countdown = DurationRoundResults * TickRate;
             gameState.scene = 3 /* Scene.Lobby */;
-            dispatcher.broadcastMessage(7 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
+            dispatcher.broadcastMessage(8 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
     }
 }
@@ -184,14 +189,22 @@ function matchLoopRoundResults(gameState, nakama, dispatcher) {
             else {
                 gameState.scene = 4 /* Scene.Game */;
             }
-            dispatcher.broadcastMessage(7 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
+            dispatcher.broadcastMessage(8 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
     }
 }
 function matchStart(message, gameState, dispatcher, nakama) {
     gameState.scene = 4 /* Scene.Game */;
-    dispatcher.broadcastMessage(7 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
+    dispatcher.broadcastMessage(8 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
     dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
+}
+function gameLoaded(message, gameState, dispatcher, nakama) {
+    let data = JSON.parse(nakama.binaryToString(message.data));
+    let playerNumber = data.playerNumber;
+    gameState.loaded[playerNumber] = true;
+    if (isPlayersReady(gameState.loaded)) {
+        dispatcher.broadcastMessage(5 /* OperationCode.GameReady */, JSON.stringify(gameState));
+    }
 }
 function playerWon(message, gameState, dispatcher, nakama) {
     if (gameState.scene != 4 /* Scene.Game */ || gameState.countdown > 0)
@@ -254,6 +267,12 @@ function isFirstPlayer(players) {
     else
         return false;
 }
+function isPlayersReady(players) {
+    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
+        if (players[playerNumber] == false)
+            return false;
+    return true;
+}
 function getNextPlayerNumber(players) {
     for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
         if (!playerNumberIsUsed(players, playerNumber))
@@ -279,5 +298,6 @@ const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
 const MessagesLogic = {
-    3: matchStart
+    3: matchStart,
+    4: gameLoaded
 };

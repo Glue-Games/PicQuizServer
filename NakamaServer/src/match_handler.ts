@@ -4,6 +4,7 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
     var gameState: GameState =
     {
         players: [],
+        loaded: [],
         playersWins: [],
         roundDeclaredWins: [[]],
         roundDeclaredDraw: [],
@@ -44,16 +45,20 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
             presence: presence,
             displayName: account.user.displayName,
             avatar: account.user.avatarUrl,
-            isHost: false
+            isHost: false,
+            playerNumber: -1
         }
         let nextPlayerNumber: number = getNextPlayerNumber(gameState.players);
         gameState.players[nextPlayerNumber] = player;
+        gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
         if(getPlayersCount(gameState.players) > 0)
         {
             player.isHost = gameState.players[0].presence.sessionId == player.presence.sessionId;
-            gameState.players[nextPlayerNumber] = player;
         }
+        player.playerNumber = nextPlayerNumber;
+        //Make sure to refresh the player data 
+        gameState.players[nextPlayerNumber] = player;
         dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(player), presencesOnMatch);
         presencesOnMatch.push(presence);
     }
@@ -96,7 +101,6 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
             dispatcher.broadcastMessage(OperationCode.HostChanged, JSON.stringify(nextHost), presences);
         }
     }
-
     return { state: gameState };
 }
 
@@ -214,6 +218,18 @@ function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispa
     dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
 }
 
+function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void
+{
+    let data: Player = JSON.parse(nakama.binaryToString(message.data));
+    let playerNumber: number = data.playerNumber;
+    gameState.loaded[playerNumber] = true;
+    if(isPlayersReady(gameState.loaded))
+    {
+        dispatcher.broadcastMessage(OperationCode.GameReady, JSON.stringify(gameState));
+    }
+       
+}
+
 function playerWon(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama): void 
 {
     if (gameState.scene != Scene.Game || gameState.countdown > 0)
@@ -299,6 +315,14 @@ function isFirstPlayer(players: Player[]): boolean
         return true;
     else 
         return false;
+}
+
+function isPlayersReady(players: boolean[]): boolean
+{
+    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
+        if(players[playerNumber] == false)
+            return false;
+    return true;
 }
 
 function getNextPlayerNumber(players: Player[]): number
