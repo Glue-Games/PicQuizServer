@@ -52,10 +52,12 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
         gameState.players[nextPlayerNumber] = player;
         gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
-        if(getPlayersCount(gameState.players) > 0)
-        {
-            player.isHost = gameState.players[0].presence.sessionId == player.presence.sessionId;
-        }
+        let hostNumber = getHostNumber(gameState.players);
+        //Host assignment
+        if(hostNumber != -1)
+            player.isHost = gameState.players[hostNumber].presence.sessionId == player.presence.sessionId;
+        else
+            player.isHost = true;
         player.playerNumber = nextPlayerNumber;
         //Make sure to refresh the player data 
         gameState.players[nextPlayerNumber] = player;
@@ -97,8 +99,8 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
         {
             let nextHost: Player = gameState.players[nextPlayerNumber]
             nextHost.isHost = true;
-            logger.info("Host changed");
-            dispatcher.broadcastMessage(OperationCode.HostChanged, JSON.stringify(nextHost), presences);
+            //presences is null so all matches can receive hostchanged code
+            dispatcher.broadcastMessage(OperationCode.HostChanged, JSON.stringify(nextHost), null);
         }
     }
     return { state: gameState };
@@ -307,6 +309,13 @@ function getPlayerNumber(players: Player[], sessionId: string): number
             return playerNumber;
 
     return PlayerNotFound;
+}
+
+function getHostNumber(players: Player[]): number{
+    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
+        if (players[playerNumber] != undefined && players[playerNumber].isHost)
+            return playerNumber;
+    return PlayerNotFound
 }
 
 function isFirstPlayer(players: Player[]): boolean

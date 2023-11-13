@@ -70,9 +70,12 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         gameState.players[nextPlayerNumber] = player;
         gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
-        if (getPlayersCount(gameState.players) > 0) {
-            player.isHost = gameState.players[0].presence.sessionId == player.presence.sessionId;
-        }
+        let hostNumber = getHostNumber(gameState.players);
+        //Host assignment
+        if (hostNumber != -1)
+            player.isHost = gameState.players[hostNumber].presence.sessionId == player.presence.sessionId;
+        else
+            player.isHost = true;
         player.playerNumber = nextPlayerNumber;
         //Make sure to refresh the player data 
         gameState.players[nextPlayerNumber] = player;
@@ -106,8 +109,8 @@ let matchLeave = function (context, logger, nakama, dispatcher, tick, state, pre
         if (nextPlayerNumber > 0) {
             let nextHost = gameState.players[nextPlayerNumber];
             nextHost.isHost = true;
-            logger.info("Host changed");
-            dispatcher.broadcastMessage(2 /* OperationCode.HostChanged */, JSON.stringify(nextHost), presences);
+            //presences is null so all matches can receive hostchanged code
+            dispatcher.broadcastMessage(2 /* OperationCode.HostChanged */, JSON.stringify(nextHost), null);
         }
     }
     return { state: gameState };
@@ -258,6 +261,12 @@ function getWinner(playersWins, players) {
 function getPlayerNumber(players, sessionId) {
     for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
         if (players[playerNumber] != undefined && players[playerNumber].presence.sessionId == sessionId)
+            return playerNumber;
+    return PlayerNotFound;
+}
+function getHostNumber(players) {
+    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
+        if (players[playerNumber] != undefined && players[playerNumber].isHost)
             return playerNumber;
     return PlayerNotFound;
 }
