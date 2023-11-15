@@ -75,7 +75,7 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
     }
 
     dispatcher.broadcastMessage(OperationCode.Players, JSON.stringify(gameState.players), presences);
-    gameState.countdown = DurationLobby * TickRate;
+    //gameState.countdown = DurationLobby * TickRate;
     return { state: gameState };
 }
 
@@ -169,9 +169,9 @@ function matchLoopBattle(gameState: GameState, nakama: nkruntime.Nakama, dispatc
     }
 }
 
+
 function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger): void
 {
-    let nextBotTimer : number = DurationAddBots;
     //Add bots here
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0)
     {
@@ -180,10 +180,16 @@ function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatch
         {
             if(gameState.players.length < MaxPlayers)
             {
-                logger.info("Sending Add Bot Command");
+                //prevent joining from this point
+                dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
                 dispatcher.broadcastMessage(OperationCode.AddBot, null);
             }
-            nextBotTimer = DurationAddBots - 1;
+            nextBotTimer -= TickRate;
+        }
+        if(gameState.countdown <= 0)
+        {
+            gameState.scene = Scene.Game;
+            dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
         }
     }
 }
@@ -238,7 +244,6 @@ function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispa
 {
     gameState.scene = Scene.Game;
     dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
-    dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
 }
 
 function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) : void
@@ -247,7 +252,6 @@ function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispat
     let botPlayerNumber: number = getNextPlayerNumber(gameState.players);
     botPlayer.playerNumber = botPlayerNumber;
     gameState.players[botPlayerNumber] = botPlayer;
-    logger.info("Sending Bot Joined");
     dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(botPlayer), null);
 }
 

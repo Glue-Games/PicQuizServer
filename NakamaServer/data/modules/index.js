@@ -102,7 +102,7 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         presencesOnMatch.push(presence);
     }
     dispatcher.broadcastMessage(0 /* OperationCode.Players */, JSON.stringify(gameState.players), presences);
-    gameState.countdown = DurationLobby * TickRate;
+    //gameState.countdown = DurationLobby * TickRate;
     return { state: gameState };
 };
 let matchLoop = function (context, logger, nakama, dispatcher, tick, state, messages) {
@@ -117,9 +117,8 @@ let matchLeave = function (context, logger, nakama, dispatcher, tick, state, pre
     for (let presence of presences) {
         let realPlayerNumber = getPlayerNumber(gameState.realPlayers, presence.sessionId);
         let playerNumber = getPlayerNumber(gameState.players, presence.sessionId);
-        let leftPlayer = gameState.players[playerNumber];
         let leftRealPlayer = gameState.realPlayers[realPlayerNumber];
-        if (leftPlayer.isHost)
+        if (leftRealPlayer.isHost)
             hostLeft = true;
         delete gameState.realPlayers[realPlayerNumber];
         delete gameState.players[playerNumber];
@@ -178,16 +177,20 @@ function matchLoopBattle(gameState, nakama, dispatcher) {
     }
 }
 function matchLoopLobby(gameState, nakama, dispatcher, logger) {
-    let nextBotTimer = DurationAddBots;
     //Add bots here
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0) {
         gameState.countdown--;
         if (gameState.countdown <= nextBotTimer) {
             if (gameState.players.length < MaxPlayers) {
-                logger.info("Sending Add Bot Command");
+                //prevent joining from this point
+                dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
                 dispatcher.broadcastMessage(3 /* OperationCode.AddBot */, null);
             }
-            nextBotTimer = DurationAddBots - 1;
+            nextBotTimer -= TickRate;
+        }
+        if (gameState.countdown <= 0) {
+            gameState.scene = 4 /* Scene.Game */;
+            dispatcher.broadcastMessage(10 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
     }
 }
@@ -229,14 +232,12 @@ function matchLoopRoundResults(gameState, nakama, dispatcher) {
 function matchStart(message, gameState, dispatcher, nakama) {
     gameState.scene = 4 /* Scene.Game */;
     dispatcher.broadcastMessage(10 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
-    dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
 }
 function botJoined(message, gameState, dispatcher, nakama, logger) {
     let botPlayer = JSON.parse(nakama.binaryToString(message.data));
     let botPlayerNumber = getNextPlayerNumber(gameState.players);
     botPlayer.playerNumber = botPlayerNumber;
     gameState.players[botPlayerNumber] = botPlayer;
-    logger.info("Sending Bot Joined");
     dispatcher.broadcastMessage(1 /* OperationCode.PlayerJoined */, JSON.stringify(botPlayer), null);
 }
 function gameLoaded(message, gameState, dispatcher, nakama) {
@@ -337,7 +338,7 @@ function playerNumberIsUsed(players, playerNumber) {
 }
 const TickRate = 16;
 const DurationLobby = 10;
-const DurationAddBots = 7;
+const DurationAddBots = 3;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
@@ -345,6 +346,7 @@ const MaxPlayers = 4;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
+let nextBotTimer = DurationAddBots * TickRate;
 const MessagesLogic = {
     3: matchStart,
     4: botJoined,
