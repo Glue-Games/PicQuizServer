@@ -1,6 +1,7 @@
 {
   "files": [
     "./src/main.ts",
+    "./src/classes.ts",
     "./src/rpcs.ts",
     "./src/match_handler.ts",
     "./src/interfaces.ts",
@@ -10,7 +11,14 @@
   "compilerOptions": {
     "target": "es2016",                                 /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     "typeRoots": [
-      "./node_modules"
+      "./node_modules",
+      "./node_modules/@types"
+    ],
+    "types": [
+      "node",
+      "nakama-runtime",
+      "typescript",
+      "undici-types"
     ],                                                  /* Specify multiple folders that act like './node_modules/@types'. */
     //"inlineSourceMap": true,                          /* Include sourcemap files inside the emitted JavaScript. */
     "outFile": "./data/modules/index.js",               /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
@@ -18,7 +26,10 @@
     "esModuleInterop": true,                            /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     //"preserveSymlinks": true,                         /* Disable resolving symlinks to their realpath. This correlates to the same flag in node. */
     "forceConsistentCasingInFileNames": true,           /* Ensure that casing is correct in imports. */
-
+    "moduleResolution": "node", 
+    "module"                      : "amd",
+    "outDir"                      : "./dist",
+    "resolveJsonModule"           : true,
     /* Type Checking */
     "strict": true,    
     /* Enable all strict type-checking options. */

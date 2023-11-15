@@ -1,6 +1,7 @@
 
 const TickRate = 16;
-const DurationLobby = 30;
+const DurationLobby = 10;
+const DurationAddBots = 7;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
@@ -9,8 +10,9 @@ const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
 
-const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) => void } =
+const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) => void } =
 {
     3: matchStart,
-    4: gameLoaded
+    4: botJoined,
+    5: gameLoaded
 }

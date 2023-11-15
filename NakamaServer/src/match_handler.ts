@@ -4,6 +4,7 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
     var gameState: GameState =
     {
         players: [],
+        realPlayers: [],
         loaded: [],
         playersWins: [],
         roundDeclaredWins: [[]],
@@ -36,7 +37,7 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
         return { state: gameState };
 
     let presencesOnMatch: nkruntime.Presence[] = [];
-    gameState.players.forEach(player => { if (player != undefined) presencesOnMatch.push(player.presence); });
+    gameState.realPlayers.forEach(player => { if (player != undefined) presencesOnMatch.push(player.presence); });
     for (let presence of presences)
     {
         var account: nkruntime.Account = nakama.accountGetId(presence.userId);
@@ -52,10 +53,18 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
         gameState.players[nextPlayerNumber] = player;
         gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
+        if(player.presence.sessionId)
+        {
+            logger.info("Real Player joined %v", player.displayName);
+            gameState.realPlayers[nextPlayerNumber] = player;
+        }
         let hostNumber = getHostNumber(gameState.players);
         //Host assignment
         if(hostNumber != -1)
-            player.isHost = gameState.players[hostNumber].presence.sessionId == player.presence.sessionId;
+            if(player.presence.sessionId)
+                player.isHost = gameState.players[hostNumber].presence.sessionId == player.presence.sessionId;
+            else
+                player.isHost = false;  
         else
             player.isHost = true;
         player.playerNumber = nextPlayerNumber;
@@ -73,7 +82,7 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
 let matchLoop: nkruntime.MatchLoopFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, tick: number, state: nkruntime.MatchState, messages: nkruntime.MatchMessage[])
 {
     let gameState = state as GameState;
-    processMessages(messages, gameState, dispatcher, nakama);
+    processMessages(messages, gameState, dispatcher, nakama, logger);
     processMatchLoop(gameState, nakama, dispatcher, logger);
     return gameState.endMatch ? null : { state: gameState };
 }
@@ -84,20 +93,22 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
     let hostLeft: boolean = false;
     for (let presence of presences)
     {
+        let realPlayerNumber: number = getPlayerNumber(gameState.realPlayers, presence.sessionId);
         let playerNumber: number = getPlayerNumber(gameState.players, presence.sessionId);
-        let leftPlayer: Player = gameState.players[playerNumber];
-        if(leftPlayer.isHost)
+        let leftRealPlayer: Player = gameState.realPlayers[realPlayerNumber];
+        if(leftRealPlayer.isHost)
             hostLeft = true;
-        delete gameState.players[playerNumber];
+        delete gameState.realPlayers[realPlayerNumber];
+        delete gameState.players[playerNumber]
     }
-    if (getPlayersCount(gameState.players) == 0)
+    if (getPlayersCount(gameState.realPlayers) == 0)
         return null;
     else if(hostLeft)
     {
-        let nextPlayerNumber: number = getFirstPlayerNumber(gameState.players);
+        let nextPlayerNumber: number = getFirstPlayerNumber(gameState.realPlayers);
         if(nextPlayerNumber > 0)
         {
-            let nextHost: Player = gameState.players[nextPlayerNumber]
+            let nextHost: Player = gameState.realPlayers[nextPlayerNumber]
             nextHost.isHost = true;
             //presences is null so all matches can receive hostchanged code
             dispatcher.broadcastMessage(OperationCode.HostChanged, JSON.stringify(nextHost), null);
@@ -116,13 +127,13 @@ let matchSignal: nkruntime.MatchSignalFunction = function (context: nkruntime.Co
     return { state };
 }
 
-function processMessages(messages: nkruntime.MatchMessage[], gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama): void
+function processMessages(messages: nkruntime.MatchMessage[], gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger): void
 {
     for (let message of messages)
     {
         let opCode: number = message.opCode;
         if (MessagesLogic.hasOwnProperty(opCode))
-            MessagesLogic[opCode](message, gameState, dispatcher, nakama);
+            MessagesLogic[opCode](message, gameState, dispatcher, nakama, logger);
         else
             messagesDefaultLogic(message, gameState, dispatcher);
     }
@@ -138,7 +149,7 @@ function processMatchLoop(gameState: GameState, nakama: nkruntime.Nakama, dispat
     switch (gameState.scene)
     {
         case Scene.Game: matchLoopBattle(gameState, nakama, dispatcher); break;
-        case Scene.Lobby: matchLoopLobby(gameState, nakama, dispatcher); break;
+        case Scene.Lobby: matchLoopLobby(gameState, nakama, dispatcher, logger); break;
     }
 }
 
@@ -158,12 +169,22 @@ function matchLoopBattle(gameState: GameState, nakama: nkruntime.Nakama, dispatc
     }
 }
 
-function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher): void
+function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger): void
 {
-    if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 1)
+    let nextBotTimer : number = DurationAddBots;
+    //Add bots here
+    if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0)
     {
         gameState.countdown--;
-        //Add bots here
+        if(gameState.countdown <= nextBotTimer)
+        {
+            if(gameState.players.length < MaxPlayers)
+            {
+                logger.info("Sending Add Bot Command");
+                dispatcher.broadcastMessage(OperationCode.AddBot, null);
+            }
+            nextBotTimer = DurationAddBots - 1;
+        }
     }
 }
 
@@ -218,6 +239,16 @@ function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispa
     gameState.scene = Scene.Game;
     dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
     dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
+}
+
+function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) : void
+{
+    let botPlayer: Player = JSON.parse(nakama.binaryToString(message.data));
+    let botPlayerNumber: number = getNextPlayerNumber(gameState.players);
+    botPlayer.playerNumber = botPlayerNumber;
+    gameState.players[botPlayerNumber] = botPlayer;
+    logger.info("Sending Bot Joined");
+    dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(botPlayer), null);
 }
 
 function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void

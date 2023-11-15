@@ -5,7 +5,8 @@ interface MatchLabel
 
 interface GameState
 {
-    players: Player[]
+    players: Player[],
+    realPlayers: Player[]
     loaded: boolean[]
     playersWins: number[]
     roundDeclaredWins: number[][]
