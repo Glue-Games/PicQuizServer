@@ -1,8 +1,11 @@
 "use strict";
 const JoinOrCreateMatchRpc = "JoinOrCreateMatchRpc";
+const PlayGameRpc = "PlayGameRpc";
 const LogicLoadedLoggerInfo = "Custom logic loaded.";
 const MatchModuleName = "match";
 function InitModule(ctx, logger, nk, initializer) {
+    initializer.registerAfterAuthenticateDevice(afterAuthenticateDeviceFn);
+    initializer.registerRpc(PlayGameRpc, playGame);
     initializer.registerRpc(JoinOrCreateMatchRpc, joinOrCreateMatch);
     initializer.registerMatch(MatchModuleName, {
         matchInit,
@@ -15,6 +18,9 @@ function InitModule(ctx, logger, nk, initializer) {
     });
     logger.info(LogicLoadedLoggerInfo);
 }
+const afterAuthenticateDeviceFn = function (ctx, logger, nk, data, req) {
+    afterAuthenticateDevice(ctx, logger, nk, data, req);
+};
 class MatchData {
     constructor() {
         this.tickRate = 0;
@@ -35,6 +41,17 @@ let joinOrCreateMatch = function (context, logger, nakama, payload) {
     if (matches.length > 0)
         return matches[0].matchId;
     return nakama.matchCreate(MatchModuleName);
+};
+let playGame = function (context, logger, nakama, payload) {
+    if (!context.userId) {
+        throw Error("No user ID in context");
+    }
+    if (payload) {
+        throw Error("No input allowed");
+    }
+    var response = {};
+    var result = JSON.stringify(response);
+    return result;
 };
 let matchInit = function (context, logger, nakama, params) {
     var label = { open: true };
@@ -336,6 +353,69 @@ function getFirstPlayerNumber(players) {
 function playerNumberIsUsed(players, playerNumber) {
     return players[playerNumber] != undefined;
 }
+let beforeChannelJoin = function (ctx, logger, nk, envelope) {
+    var _a;
+    // If the channel join is a DirectMessage type, check to see if the user is friends with the recipient first
+    if (envelope.channelJoin.type == 2 /* nkruntime.ChanType.DirectMessage */) {
+        const result = nk.friendsList(ctx.userId, undefined, 0, undefined);
+        const filtered = (_a = result === null || result === void 0 ? void 0 : result.friends) === null || _a === void 0 ? void 0 : _a.filter(function (friend) {
+            var _a;
+            return ((_a = friend === null || friend === void 0 ? void 0 : friend.user) === null || _a === void 0 ? void 0 : _a.userId) == envelope.channelJoin.target;
+        });
+        if ((filtered === null || filtered === void 0 ? void 0 : filtered.length) == 0) {
+            throw new Error("You cannot direct message someone you are not friends with.");
+        }
+    }
+    return envelope;
+};
+let afterAuthenticateDevice = function (ctx, logger, nk, data, request) {
+    if (!data.created) {
+        logger.info("%s already exists", ctx.userId);
+        // Account already exists.
+        return;
+    }
+    //Add initial wallet values to user
+    let changeset = {
+        "coins": 500,
+        "lives": 5
+    };
+    updateWallet(nk, ctx.userId, changeset, {});
+    var initialState = {
+        "playerLevel": 1,
+        "playerExperience": 0,
+        "stageLevel": 1
+    };
+    storeUserStats(nk, logger, ctx.userId, initialState);
+    logger.info("%s account Initialized", ctx.userId);
+};
+const currencyCoinKeyName = 'coins';
+const currencyLivesKeyName = 'lives';
+const rpcAddUserCoins = function (ctx, logger, nakama) {
+    //TODO modify how much coins to be added
+    return "";
+};
+function updateWallet(nk, userId, changeset, metadata) {
+    let result = nk.walletUpdate(userId, changeset, metadata, true);
+    return result;
+}
+function storeUserStats(nk, logger, userId, stats) {
+    try {
+        nk.storageWrite([
+            {
+                collection: StatsCollectionKey,
+                key: StatsValueKey,
+                userId: userId,
+                value: stats,
+                permissionRead: StatsPermissionRead,
+                permissionWrite: StatsPermissionWrite,
+            }
+        ]);
+    }
+    catch (error) {
+        logger.error('storageWrite error');
+        throw error;
+    }
+}
 const TickRate = 16;
 const DurationLobby = 10;
 const DurationAddBots = 3;
@@ -346,6 +426,10 @@ const MaxPlayers = 4;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
+const StatsPermissionRead = 2;
+const StatsPermissionWrite = 0;
+const StatsCollectionKey = "stats";
+const StatsValueKey = "public";
 let nextBotTimer = DurationAddBots * TickRate;
 const MessagesLogic = {
     3: matchStart,

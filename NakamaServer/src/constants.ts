@@ -9,6 +9,11 @@ const MaxPlayers = 4;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
+
+const StatsPermissionRead = 2;
+const StatsPermissionWrite = 0;
+const StatsCollectionKey = "stats";
+const StatsValueKey = "public"
 let nextBotTimer : number = DurationAddBots * TickRate;
 
 const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) => void } =

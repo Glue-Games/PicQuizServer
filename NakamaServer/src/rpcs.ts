@@ -10,3 +10,20 @@ let joinOrCreateMatch: nkruntime.RpcFunction = function (context: nkruntime.Cont
 
     return nakama.matchCreate(MatchModuleName);
 }
+
+let playGame: nkruntime.RpcFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, payload: string): string
+{
+    if(!context.userId){
+        throw Error("No user ID in context");
+    }
+    if(payload){
+        throw Error("No input allowed")
+    }
+
+    var response =
+    {
+
+    }
+    var result = JSON.stringify(response);
+    return result;
+}

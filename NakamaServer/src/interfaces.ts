@@ -5,8 +5,8 @@ interface MatchLabel
 
 interface GameState
 {
-    players: Player[],
-    realPlayers: Player[]
+    players: Player[], //Can contain bots
+    realPlayers: Player[] //Players with Presence
     loaded: boolean[]
     playersWins: number[]
     roundDeclaredWins: number[][]
@@ -34,6 +34,18 @@ interface PlayerWonData
 {
     tick: number
     playerNumber: number
+}
+
+interface PlayerProgressionData
+{
+    playerLevel: number
+    playerExperience: number
+    stageLevel: number
+}
+
+interface InitializationData
+{
+    created: boolean
 }
 
 interface DrawData
