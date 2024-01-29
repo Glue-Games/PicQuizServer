@@ -47,7 +47,8 @@ let matchInit = function (context, logger, nakama, params) {
         roundDeclaredDraw: [],
         scene: 3 /* Scene.Lobby */,
         countdown: DurationLobby * TickRate,
-        endMatch: false
+        endMatch: false,
+        isTutorial: false
     };
     return {
         state: gameState,
@@ -71,10 +72,19 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         presencesOnMatch.push(player.presence); });
     for (let presence of presences) {
         var account = nakama.accountGetId(presence.userId);
+        let profile = {
+            name: account.user.displayName,
+            nickname: account.user.username,
+            country: account.user.location,
+            state: account.user.timezone,
+            age: 0,
+            profession: "",
+            hobbies: [],
+            avatar: account.user.avatarUrl
+        };
         let player = {
             presence: presence,
-            displayName: account.user.displayName,
-            avatar: account.user.avatarUrl,
+            playerProfileData: profile,
             isHost: false,
             playerNumber: -1
         };
@@ -83,7 +93,7 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
         if (player.presence.sessionId) {
-            logger.info("Real Player joined %v", player.displayName);
+            logger.info("Real Player joined %v", player.playerProfileData.name);
             gameState.realPlayers[nextPlayerNumber] = player;
         }
         let hostNumber = getHostNumber(gameState.players);
@@ -142,6 +152,9 @@ let matchTerminate = function (context, logger, nakama, dispatcher, tick, state,
 let matchSignal = function (context, logger, nk, dispatcher, tick, state, data) {
     return { state };
 };
+function processTutorial(message, gameState, dispatcher, nakama) {
+    gameState.isTutorial = true;
+}
 function processMessages(messages, gameState, dispatcher, nakama, logger) {
     for (let message of messages) {
         let opCode = message.opCode;
@@ -165,30 +178,36 @@ function processMatchLoop(gameState, nakama, dispatcher, logger) {
     }
 }
 function matchLoopBattle(gameState, nakama, dispatcher) {
-    if (gameState.countdown > 0) {
+    /*
+    if (gameState.countdown > 0)
+    {
         gameState.countdown--;
-        if (gameState.countdown == 0) {
+        if (gameState.countdown == 0)
+        {
             gameState.roundDeclaredWins = [];
             gameState.roundDeclaredDraw = [];
             gameState.countdown = DurationRoundResults * TickRate;
-            gameState.scene = 3 /* Scene.Lobby */;
-            dispatcher.broadcastMessage(10 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
+            gameState.scene = Scene.Lobby;
+            dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
         }
-    }
+    }*/
 }
 function matchLoopLobby(gameState, nakama, dispatcher, logger) {
     //Add bots here
+    let maxPlayersLobby = gameState.isTutorial ? TutorialMaxPlayers : MaxPlayers;
+    logger.info("Max players in lobby %v", maxPlayersLobby);
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0) {
         gameState.countdown--;
         if (gameState.countdown <= nextBotTimer) {
-            if (gameState.players.length < MaxPlayers) {
+            if (gameState.players.length < maxPlayersLobby) {
                 //prevent joining from this point
                 dispatcher.matchLabelUpdate(JSON.stringify({ open: false }));
                 dispatcher.broadcastMessage(3 /* OperationCode.AddBot */, null);
             }
             nextBotTimer -= TickRate;
         }
-        if (gameState.countdown <= 0) {
+        if (gameState.countdown <= 0 || getPlayersCount(gameState.players) == maxPlayersLobby) {
+            logger.info("Max players reached, command change scene");
             gameState.scene = 4 /* Scene.Game */;
             dispatcher.broadcastMessage(10 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
@@ -238,6 +257,7 @@ function botJoined(message, gameState, dispatcher, nakama, logger) {
     let botPlayerNumber = getNextPlayerNumber(gameState.players);
     botPlayer.playerNumber = botPlayerNumber;
     gameState.players[botPlayerNumber] = botPlayer;
+    logger.info("Bot Joined %v", JSON.stringify(botPlayer));
     dispatcher.broadcastMessage(1 /* OperationCode.PlayerJoined */, JSON.stringify(botPlayer), null);
 }
 function gameLoaded(message, gameState, dispatcher, nakama) {
@@ -342,7 +362,8 @@ const DurationAddBots = 3;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
-const MaxPlayers = 4;
+const MaxPlayers = 2;
+const TutorialMaxPlayers = 1;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
@@ -350,5 +371,6 @@ let nextBotTimer = DurationAddBots * TickRate;
 const MessagesLogic = {
     3: matchStart,
     4: botJoined,
-    5: gameLoaded
+    5: gameLoaded,
+    11: processTutorial,
 };

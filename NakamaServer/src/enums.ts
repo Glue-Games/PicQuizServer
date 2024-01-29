@@ -19,5 +19,6 @@ const enum OperationCode
     GameReady = 7,          // raised when all players are ready to load the game
     PlayerInput = 8,
     PlayerWon = 9,
-    ChangeScene = 10 
+    ChangeScene = 10,
+    Tutorial = 11, 
 }

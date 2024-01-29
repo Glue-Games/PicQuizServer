@@ -5,7 +5,8 @@ const DurationAddBots = 3;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
-const MaxPlayers = 4;
+const MaxPlayers = 2;
+const TutorialMaxPlayers = 1;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
@@ -15,5 +16,6 @@ const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state
 {
     3: matchStart,
     4: botJoined,
-    5: gameLoaded
+    5: gameLoaded,
+    11: processTutorial,
 }

@@ -14,15 +14,27 @@ interface GameState
     scene: Scene
     countdown: number
     endMatch: boolean
+    isTutorial: boolean
 }
 
 interface Player
 {
     presence: nkruntime.Presence
-    displayName: string
-    avatar: string
-    isHost: boolean
+    playerProfileData: PlayerProfileData
     playerNumber: number
+    isHost: boolean
+}
+
+interface PlayerProfileData
+{
+    name: string
+    nickname: string
+    country: string
+    state: string
+    age: number
+    profession: string
+    hobbies: string[]
+    avatar: string
 }
 
 interface TimeRemainingData
