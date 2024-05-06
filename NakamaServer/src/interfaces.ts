@@ -14,7 +14,7 @@ interface GameState
     scene: Scene
     countdown: number
     endMatch: boolean
-    isTutorial: boolean
+    isSolo: boolean
 }
 
 interface Player

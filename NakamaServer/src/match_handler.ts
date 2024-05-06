@@ -12,7 +12,7 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
         scene: Scene.Lobby,
         countdown: DurationLobby * TickRate,
         endMatch: false,
-        isTutorial: false
+        isSolo: false
     }
 
     return {
@@ -138,8 +138,8 @@ let matchSignal: nkruntime.MatchSignalFunction = function (context: nkruntime.Co
     return { state };
 }
 
-function processTutorial(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama){
-    gameState.isTutorial = true;
+function processSoloMode(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama){
+    gameState.isSolo = true;
 }
 
 function processMessages(messages: nkruntime.MatchMessage[], gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger): void
@@ -189,7 +189,7 @@ function matchLoopBattle(gameState: GameState, nakama: nkruntime.Nakama, dispatc
 function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger): void
 {
     //Add bots here
-    let maxPlayersLobby = gameState.isTutorial ? TutorialMaxPlayers : MaxPlayers;
+    let maxPlayersLobby = gameState.isSolo ? SoloMaxPlayers : MaxPlayers;
     logger.info("Max players in lobby %v", maxPlayersLobby)
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0)
     {
