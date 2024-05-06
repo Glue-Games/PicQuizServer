@@ -48,7 +48,7 @@ let matchInit = function (context, logger, nakama, params) {
         scene: 3 /* Scene.Lobby */,
         countdown: DurationLobby * TickRate,
         endMatch: false,
-        isTutorial: false
+        isSolo: false
     };
     return {
         state: gameState,
@@ -74,17 +74,14 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         var account = nakama.accountGetId(presence.userId);
         let profile = {
             name: account.user.displayName,
-            nickname: account.user.username,
+            username: account.user.username,
             country: account.user.location,
             state: account.user.timezone,
-            age: 0,
-            profession: "",
-            hobbies: [],
-            avatar: account.user.avatarUrl
+            avatarUrl: account.user.avatarUrl
         };
         let player = {
             presence: presence,
-            playerProfileData: profile,
+            playerProfile: profile,
             isHost: false,
             playerNumber: -1
         };
@@ -93,7 +90,7 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
         gameState.loaded[nextPlayerNumber] = false;
         gameState.playersWins[nextPlayerNumber] = 0;
         if (player.presence.sessionId) {
-            logger.info("Real Player joined %v", player.playerProfileData.name);
+            logger.info("Real Player joined %v", player.playerProfile.name);
             gameState.realPlayers[nextPlayerNumber] = player;
         }
         let hostNumber = getHostNumber(gameState.players);
@@ -152,8 +149,8 @@ let matchTerminate = function (context, logger, nakama, dispatcher, tick, state,
 let matchSignal = function (context, logger, nk, dispatcher, tick, state, data) {
     return { state };
 };
-function processTutorial(message, gameState, dispatcher, nakama) {
-    gameState.isTutorial = true;
+function processSoloMode(message, gameState, dispatcher, nakama) {
+    gameState.isSolo = true;
 }
 function processMessages(messages, gameState, dispatcher, nakama, logger) {
     for (let message of messages) {
@@ -194,7 +191,7 @@ function matchLoopBattle(gameState, nakama, dispatcher) {
 }
 function matchLoopLobby(gameState, nakama, dispatcher, logger) {
     //Add bots here
-    let maxPlayersLobby = gameState.isTutorial ? TutorialMaxPlayers : MaxPlayers;
+    let maxPlayersLobby = gameState.isSolo ? SoloMaxPlayers : MaxPlayers;
     logger.info("Max players in lobby %v", maxPlayersLobby);
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0) {
         gameState.countdown--;
@@ -363,7 +360,7 @@ const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
 const MaxPlayers = 2;
-const TutorialMaxPlayers = 1;
+const SoloMaxPlayers = 1;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
 const KeyTrophies = "Trophies";
@@ -372,5 +369,5 @@ const MessagesLogic = {
     3: matchStart,
     4: botJoined,
     5: gameLoaded,
-    11: processTutorial,
+    11: processSoloMode,
 };

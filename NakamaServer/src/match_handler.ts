@@ -42,21 +42,18 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
     for (let presence of presences)
     {
         var account: nkruntime.Account = nakama.accountGetId(presence.userId);
-        let profile: PlayerProfileData =
+        let profile: PlayerProfile =
         {
             name: account.user.displayName,
-            nickname: account.user.username,
+            username: account.user.username,
             country: account.user.location,
             state: account.user.timezone,
-            age: 0,
-            profession: "",
-            hobbies: [],
-            avatar: account.user.avatarUrl
+            avatarUrl: account.user.avatarUrl
         }
         let player: Player =
         {
             presence: presence,
-            playerProfileData: profile,
+            playerProfile: profile,
             isHost: false,
             playerNumber: -1
         }
@@ -66,7 +63,7 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
         gameState.playersWins[nextPlayerNumber] = 0;
         if(player.presence.sessionId)
         {
-            logger.info("Real Player joined %v", player.playerProfileData.name);
+            logger.info("Real Player joined %v", player.playerProfile.name);
             gameState.realPlayers[nextPlayerNumber] = player;
         }
         let hostNumber = getHostNumber(gameState.players);

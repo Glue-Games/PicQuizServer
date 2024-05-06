@@ -20,21 +20,18 @@ interface GameState
 interface Player
 {
     presence: nkruntime.Presence
-    playerProfileData: PlayerProfileData
+    playerProfile: PlayerProfile
     playerNumber: number
     isHost: boolean
 }
 
-interface PlayerProfileData
+interface PlayerProfile
 {
     name: string
-    nickname: string
+    username: string
     country: string
     state: string
-    age: number
-    profession: string
-    hobbies: string[]
-    avatar: string
+    avatarUrl: string
 }
 
 interface TimeRemainingData
