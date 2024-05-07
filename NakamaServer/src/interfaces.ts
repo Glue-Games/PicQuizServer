@@ -21,7 +21,7 @@ interface Player
 {
     presence: nkruntime.Presence
     playerProfile: PlayerProfile
-    playerNumber: number
+    playerIndex: number
     isHost: boolean
 }
 
@@ -42,7 +42,7 @@ interface TimeRemainingData
 interface PlayerWonData
 {
     tick: number
-    playerNumber: number
+    playerIndex: number
 }
 
 interface DrawData

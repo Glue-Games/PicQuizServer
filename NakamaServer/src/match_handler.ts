@@ -55,18 +55,18 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
             presence: presence,
             playerProfile: profile,
             isHost: false,
-            playerNumber: -1
+            playerIndex: -1
         }
-        let nextPlayerNumber: number = getNextPlayerNumber(gameState.players);
-        gameState.players[nextPlayerNumber] = player;
-        gameState.loaded[nextPlayerNumber] = false;
-        gameState.playersWins[nextPlayerNumber] = 0;
+        let nextPlayerIndex: number = getNextPlayerIndex(gameState.players);
+        gameState.players[nextPlayerIndex] = player;
+        gameState.loaded[nextPlayerIndex] = false;
+        gameState.playersWins[nextPlayerIndex] = 0;
         if(player.presence.sessionId)
         {
             logger.info("Real Player joined %v", player.playerProfile.name);
-            gameState.realPlayers[nextPlayerNumber] = player;
+            gameState.realPlayers[nextPlayerIndex] = player;
         }
-        let hostNumber = getHostNumber(gameState.players);
+        let hostNumber = getHostIndex(gameState.players);
         //Host assignment
         if(hostNumber != -1)
             if(player.presence.sessionId)
@@ -75,9 +75,10 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
                 player.isHost = false;  
         else
             player.isHost = true;
-        player.playerNumber = nextPlayerNumber;
+        player.playerIndex = nextPlayerIndex;
         //Make sure to refresh the player data 
-        gameState.players[nextPlayerNumber] = player;
+        gameState.players[nextPlayerIndex] = player;
+        logger.info("Player added %v with player index %v", player.playerProfile.name, player.playerIndex);
         dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(player), presencesOnMatch);
         presencesOnMatch.push(presence);
     }
@@ -101,19 +102,19 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
     let hostLeft: boolean = false;
     for (let presence of presences)
     {
-        let realPlayerNumber: number = getPlayerNumber(gameState.realPlayers, presence.sessionId);
-        let playerNumber: number = getPlayerNumber(gameState.players, presence.sessionId);
-        let leftRealPlayer: Player = gameState.realPlayers[realPlayerNumber];
+        let realPlayerIndex: number = getPlayerIndex(gameState.realPlayers, presence.sessionId);
+        let playerNumber: number = getPlayerIndex(gameState.players, presence.sessionId);
+        let leftRealPlayer: Player = gameState.realPlayers[realPlayerIndex];
         if(leftRealPlayer.isHost)
             hostLeft = true;
-        delete gameState.realPlayers[realPlayerNumber];
+        delete gameState.realPlayers[realPlayerIndex];
         delete gameState.players[playerNumber]
     }
     if (getPlayersCount(gameState.realPlayers) == 0)
         return null;
     else if(hostLeft)
     {
-        let nextPlayerNumber: number = getFirstPlayerNumber(gameState.realPlayers);
+        let nextPlayerNumber: number = getFirstPlayerIndex(gameState.realPlayers);
         if(nextPlayerNumber > 0)
         {
             let nextHost: Player = gameState.realPlayers[nextPlayerNumber]
@@ -187,7 +188,6 @@ function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatch
 {
     //Add bots here
     let maxPlayersLobby = gameState.isSolo ? SoloMaxPlayers : MaxPlayers;
-    logger.info("Max players in lobby %v", maxPlayersLobby)
     if (gameState.countdown > 0 && getPlayersCount(gameState.players) > 0)
     {
         gameState.countdown--;
@@ -265,8 +265,8 @@ function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispa
 function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) : void
 {
     let botPlayer: Player = JSON.parse(nakama.binaryToString(message.data));
-    let botPlayerNumber: number = getNextPlayerNumber(gameState.players);
-    botPlayer.playerNumber = botPlayerNumber;
+    let botPlayerNumber: number = getNextPlayerIndex(gameState.players);
+    botPlayer.playerIndex = botPlayerNumber;
     gameState.players[botPlayerNumber] = botPlayer;
     logger.info("Bot Joined %v", JSON.stringify(botPlayer));
     dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(botPlayer), null);
@@ -275,7 +275,7 @@ function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispat
 function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void
 {
     let data: Player = JSON.parse(nakama.binaryToString(message.data));
-    let playerNumber: number = data.playerNumber;
+    let playerNumber: number = data.playerIndex;
     gameState.loaded[playerNumber] = true;
     if(isPlayersReady(gameState.loaded))
     {
@@ -292,18 +292,18 @@ function playerWon(message: nkruntime.MatchMessage, gameState: GameState, dispat
     
     let data: PlayerWonData = JSON.parse(nakama.binaryToString(message.data));
     let tick: number = data.tick;
-    let playerNumber: number = data.playerNumber;
+    let playerIndex: number = data.playerIndex;
     if (gameState.roundDeclaredWins[tick] == undefined)
         gameState.roundDeclaredWins[tick] = [];
 
-    if (gameState.roundDeclaredWins[tick][playerNumber] == undefined)
-        gameState.roundDeclaredWins[tick][playerNumber] = 0;
+    if (gameState.roundDeclaredWins[tick][playerIndex] == undefined)
+        gameState.roundDeclaredWins[tick][playerIndex] = 0;
 
-    gameState.roundDeclaredWins[tick][playerNumber]++;
-    if (gameState.roundDeclaredWins[tick][playerNumber] < getPlayersCount(gameState.players))
+    gameState.roundDeclaredWins[tick][playerIndex]++;
+    if (gameState.roundDeclaredWins[tick][playerIndex] < getPlayersCount(gameState.players))
         return;
 
-    gameState.playersWins[playerNumber]++;
+    gameState.playersWins[playerIndex]++;
     gameState.countdown = DurationBattleEnding * TickRate;
     dispatcher.broadcastMessage(message.opCode, message.data, null, message.sender);
 }
@@ -329,8 +329,8 @@ function draw(message: nkruntime.MatchMessage, gameState: GameState, dispatcher:
 function getPlayersCount(players: Player[]): number
 {
     var count: number = 0;
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (players[playerNumber] != undefined)
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (players[playerIndex] != undefined)
             count++;
 
     return count;
@@ -338,8 +338,8 @@ function getPlayersCount(players: Player[]): number
 
 function playerObtainedNecessaryWins(playersWins: number[]): boolean
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (playersWins[playerNumber] == NecessaryWins)
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (playersWins[playerIndex] == NecessaryWins)
             return true;
 
     return false;
@@ -347,26 +347,26 @@ function playerObtainedNecessaryWins(playersWins: number[]): boolean
 
 function getWinner(playersWins: number[], players: Player[]): Player | null
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (playersWins[playerNumber] == NecessaryWins)
-            return players[playerNumber];
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (playersWins[playerIndex] == NecessaryWins)
+            return players[playerIndex];
 
     return null;
 }
 
-function getPlayerNumber(players: Player[], sessionId: string): number
+function getPlayerIndex(players: Player[], sessionId: string): number
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (players[playerNumber] != undefined && players[playerNumber].presence.sessionId == sessionId)
-            return playerNumber;
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (players[playerIndex] != undefined && players[playerIndex].presence.sessionId == sessionId)
+            return playerIndex;
 
     return PlayerNotFound;
 }
 
-function getHostNumber(players: Player[]): number{
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (players[playerNumber] != undefined && players[playerNumber].isHost)
-            return playerNumber;
+function getHostIndex(players: Player[]): number{
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (players[playerIndex] != undefined && players[playerIndex].isHost)
+            return playerIndex;
     return PlayerNotFound
 }
 
@@ -380,31 +380,31 @@ function isFirstPlayer(players: Player[]): boolean
 
 function isPlayersReady(players: boolean[]): boolean
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if(players[playerNumber] == false)
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if(players[playerIndex] == false)
             return false;
     return true;
 }
 
-function getNextPlayerNumber(players: Player[]): number
+function getNextPlayerIndex(players: Player[]): number
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (!playerNumberIsUsed(players, playerNumber))
-            return playerNumber;
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (!playerIndexIsUsed(players, playerIndex))
+            return playerIndex;
 
     return PlayerNotFound;
 }
 
-function getFirstPlayerNumber(players: Player[]): number
+function getFirstPlayerIndex(players: Player[]): number
 {
-    for (let playerNumber = 0; playerNumber < MaxPlayers; playerNumber++)
-        if (playerNumberIsUsed(players, playerNumber))
-            return playerNumber;
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
+        if (playerIndexIsUsed(players, playerIndex))
+            return playerIndex;
 
     return PlayerNotFound;
 }
 
-function playerNumberIsUsed(players: Player[], playerNumber: number): boolean
+function playerIndexIsUsed(players: Player[], playerNumber: number): boolean
 {
     return players[playerNumber] != undefined;
 }
