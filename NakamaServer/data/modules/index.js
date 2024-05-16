@@ -38,10 +38,16 @@ let joinOrCreateMatch = function (context, logger, nakama, payload) {
 };
 let matchInit = function (context, logger, nakama, params) {
     var label = { open: true };
+    var gameLevel = {
+        level: -1,
+        caption: "",
+        category: ""
+    };
     var gameState = {
         players: [],
         realPlayers: [],
         loaded: [],
+        level: gameLevel,
         playersWins: [],
         roundDeclaredWins: [[]],
         roundDeclaredDraw: [],
@@ -153,6 +159,11 @@ let matchSignal = function (context, logger, nk, dispatcher, tick, state, data) 
 function processSoloMode(message, gameState, dispatcher, nakama) {
     gameState.isSolo = true;
 }
+function processGameLevel(message, gameState, dispatcher, nakama) {
+    let gameLevel = JSON.parse(nakama.binaryToString(message.data));
+    gameState.level = gameLevel;
+    dispatcher.broadcastMessage(13 /* OperationCode.AssignLevel */, JSON.stringify(gameLevel));
+}
 function processMessages(messages, gameState, dispatcher, nakama, logger) {
     for (let message of messages) {
         let opCode = message.opCode;
@@ -251,17 +262,17 @@ function matchStart(message, gameState, dispatcher, nakama) {
 }
 function botJoined(message, gameState, dispatcher, nakama, logger) {
     let botPlayer = JSON.parse(nakama.binaryToString(message.data));
-    let botPlayerNumber = getNextPlayerIndex(gameState.players);
-    botPlayer.playerIndex = botPlayerNumber;
-    gameState.players[botPlayerNumber] = botPlayer;
+    let botPlayerIndex = getNextPlayerIndex(gameState.players);
+    botPlayer.playerIndex = botPlayerIndex;
+    gameState.players[botPlayerIndex] = botPlayer;
     logger.info("Bot Joined %v", JSON.stringify(botPlayer));
     dispatcher.broadcastMessage(1 /* OperationCode.PlayerJoined */, JSON.stringify(botPlayer), null);
 }
 function gameLoaded(message, gameState, dispatcher, nakama) {
     let data = JSON.parse(nakama.binaryToString(message.data));
-    let playerNumber = data.playerIndex;
-    gameState.loaded[playerNumber] = true;
-    if (isPlayersReady(gameState.loaded)) {
+    let playerIndex = data.playerIndex;
+    gameState.loaded[playerIndex] = true;
+    if (isPlayersReady(gameState.loaded) && isGameLevelReady(gameState)) {
         dispatcher.broadcastMessage(7 /* OperationCode.GameReady */, JSON.stringify(gameState));
     }
 }
@@ -338,6 +349,9 @@ function isPlayersReady(players) {
             return false;
     return true;
 }
+function isGameLevelReady(gameState) {
+    return gameState.level.level > -1;
+}
 function getNextPlayerIndex(players) {
     for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
         if (!playerIndexIsUsed(players, playerIndex))
@@ -370,4 +384,5 @@ const MessagesLogic = {
     4: botJoined,
     5: gameLoaded,
     11: processSoloMode,
+    12: processGameLevel
 };

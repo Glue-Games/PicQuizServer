@@ -1,11 +1,18 @@
 let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, params: { [key: string]: string })
 {
     var label: MatchLabel = { open: true }
+    var gameLevel: GameLevel =
+    {
+        level: -1,
+        caption: "",
+        category: ""
+    }
     var gameState: GameState =
     {
         players: [],
         realPlayers: [],
         loaded: [],
+        level: gameLevel,
         playersWins: [],
         roundDeclaredWins: [[]],
         roundDeclaredDraw: [],
@@ -140,6 +147,12 @@ function processSoloMode(message: nkruntime.MatchMessage, gameState: GameState, 
     gameState.isSolo = true;
 }
 
+function processGameLevel(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama){
+    let gameLevel: GameLevel = JSON.parse(nakama.binaryToString(message.data));
+    gameState.level = gameLevel;
+    dispatcher.broadcastMessage(OperationCode.AssignLevel, JSON.stringify(gameLevel));
+}
+
 function processMessages(messages: nkruntime.MatchMessage[], gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger): void
 {
     for (let message of messages)
@@ -265,9 +278,9 @@ function matchStart(message: nkruntime.MatchMessage, gameState: GameState, dispa
 function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) : void
 {
     let botPlayer: Player = JSON.parse(nakama.binaryToString(message.data));
-    let botPlayerNumber: number = getNextPlayerIndex(gameState.players);
-    botPlayer.playerIndex = botPlayerNumber;
-    gameState.players[botPlayerNumber] = botPlayer;
+    let botPlayerIndex: number = getNextPlayerIndex(gameState.players);
+    botPlayer.playerIndex = botPlayerIndex;
+    gameState.players[botPlayerIndex] = botPlayer;
     logger.info("Bot Joined %v", JSON.stringify(botPlayer));
     dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(botPlayer), null);
 }
@@ -275,9 +288,9 @@ function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispat
 function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void
 {
     let data: Player = JSON.parse(nakama.binaryToString(message.data));
-    let playerNumber: number = data.playerIndex;
-    gameState.loaded[playerNumber] = true;
-    if(isPlayersReady(gameState.loaded))
+    let playerIndex: number = data.playerIndex;
+    gameState.loaded[playerIndex] = true;
+    if(isPlayersReady(gameState.loaded) && isGameLevelReady(gameState))
     {
         dispatcher.broadcastMessage(OperationCode.GameReady, JSON.stringify(gameState));
     }
@@ -384,6 +397,10 @@ function isPlayersReady(players: boolean[]): boolean
         if(players[playerIndex] == false)
             return false;
     return true;
+}
+
+function isGameLevelReady(gameState: GameState){
+    return gameState.level.level > -1;
 }
 
 function getNextPlayerIndex(players: Player[]): number

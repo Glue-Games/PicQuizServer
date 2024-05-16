@@ -20,5 +20,7 @@ const enum OperationCode
     PlayerInput = 8,
     PlayerWon = 9,
     ChangeScene = 10,
-    Tutorial = 11, 
+    Tutorial = 11,
+    ProcessLevel = 12,
+    AssignLevel = 13
 }

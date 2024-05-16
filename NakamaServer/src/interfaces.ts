@@ -8,6 +8,7 @@ interface GameState
     players: Player[],
     realPlayers: Player[]
     loaded: boolean[]
+    level: GameLevel,
     playersWins: number[]
     roundDeclaredWins: number[][]
     roundDeclaredDraw: number[]
@@ -15,6 +16,13 @@ interface GameState
     countdown: number
     endMatch: boolean
     isSolo: boolean
+}
+
+interface GameLevel
+{
+    level: number,
+    caption: string,
+    category: string
 }
 
 interface Player
