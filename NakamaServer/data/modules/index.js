@@ -99,6 +99,11 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
             logger.info("Real Player joined %v", player.playerProfile.name);
             gameState.realPlayers[nextPlayerIndex] = player;
         }
+        else {
+            logger.info("Bot Player joined");
+            //automatically set bot players as "loaded"
+            gameState.loaded[nextPlayerIndex] = true;
+        }
         let hostNumber = getHostIndex(gameState.players);
         //Host assignment
         if (hostNumber != -1)
@@ -215,7 +220,7 @@ function matchLoopLobby(gameState, nakama, dispatcher, logger) {
             nextBotTimer -= TickRate;
         }
         if (gameState.countdown <= 0 || getPlayersCount(gameState.players) == maxPlayersLobby) {
-            logger.info("Max players reached, command change scene");
+            logger.info("Max players reached, command to load new scene");
             gameState.scene = 4 /* Scene.Game */;
             dispatcher.broadcastMessage(10 /* OperationCode.ChangeScene */, JSON.stringify(gameState.scene));
         }
@@ -268,10 +273,11 @@ function botJoined(message, gameState, dispatcher, nakama, logger) {
     logger.info("Bot Joined %v", JSON.stringify(botPlayer));
     dispatcher.broadcastMessage(1 /* OperationCode.PlayerJoined */, JSON.stringify(botPlayer), null);
 }
-function gameLoaded(message, gameState, dispatcher, nakama) {
+function gameLoaded(message, gameState, dispatcher, nakama, logger) {
     let data = JSON.parse(nakama.binaryToString(message.data));
     let playerIndex = data.playerIndex;
     gameState.loaded[playerIndex] = true;
+    logger.info("is ready %v Is Game Ready %v", isPlayersReady(gameState.loaded), isGameLevelReady(gameState));
     if (isPlayersReady(gameState.loaded) && isGameLevelReady(gameState)) {
         dispatcher.broadcastMessage(7 /* OperationCode.GameReady */, JSON.stringify(gameState));
     }
@@ -343,9 +349,9 @@ function isFirstPlayer(players) {
     else
         return false;
 }
-function isPlayersReady(players) {
+function isPlayersReady(loaded) {
     for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-        if (players[playerIndex] == false)
+        if (loaded[playerIndex] == false)
             return false;
     return true;
 }
@@ -382,7 +388,7 @@ let nextBotTimer = DurationAddBots * TickRate;
 const MessagesLogic = {
     3: matchStart,
     4: botJoined,
-    5: gameLoaded,
+    6: gameLoaded,
     11: processSoloMode,
     12: processGameLevel
 };

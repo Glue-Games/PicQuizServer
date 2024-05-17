@@ -73,6 +73,12 @@ let matchJoin: nkruntime.MatchJoinFunction = function (context: nkruntime.Contex
             logger.info("Real Player joined %v", player.playerProfile.name);
             gameState.realPlayers[nextPlayerIndex] = player;
         }
+        else
+        {
+            logger.info("Bot Player joined");
+            //automatically set bot players as "loaded"
+            gameState.loaded[nextPlayerIndex] = true;
+        }
         let hostNumber = getHostIndex(gameState.players);
         //Host assignment
         if(hostNumber != -1)
@@ -216,7 +222,7 @@ function matchLoopLobby(gameState: GameState, nakama: nkruntime.Nakama, dispatch
         }
         if(gameState.countdown <= 0 || getPlayersCount(gameState.players) == maxPlayersLobby)
         {
-            logger.info("Max players reached, command change scene");
+            logger.info("Max players reached, command to load new scene");
             gameState.scene = Scene.Game;
             dispatcher.broadcastMessage(OperationCode.ChangeScene, JSON.stringify(gameState.scene));
         }
@@ -285,16 +291,16 @@ function botJoined(message: nkruntime.MatchMessage, gameState: GameState, dispat
     dispatcher.broadcastMessage(OperationCode.PlayerJoined, JSON.stringify(botPlayer), null);
 }
 
-function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama) : void
+function gameLoaded(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger) : void
 {
     let data: Player = JSON.parse(nakama.binaryToString(message.data));
     let playerIndex: number = data.playerIndex;
     gameState.loaded[playerIndex] = true;
+    logger.info("is ready %v Is Game Ready %v",isPlayersReady(gameState.loaded), isGameLevelReady(gameState));
     if(isPlayersReady(gameState.loaded) && isGameLevelReady(gameState))
     {
         dispatcher.broadcastMessage(OperationCode.GameReady, JSON.stringify(gameState));
     }
-       
 }
 
 function playerWon(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama): void 
@@ -391,10 +397,10 @@ function isFirstPlayer(players: Player[]): boolean
         return false;
 }
 
-function isPlayersReady(players: boolean[]): boolean
+function isPlayersReady(loaded: boolean[]): boolean
 {
     for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-        if(players[playerIndex] == false)
+        if(loaded[playerIndex] == false)
             return false;
     return true;
 }

@@ -16,7 +16,7 @@ const MessagesLogic: { [opCode: number]: (message: nkruntime.MatchMessage, state
 {
     3: matchStart,
     4: botJoined,
-    5: gameLoaded,
+    6: gameLoaded,
     11: processSoloMode,
     12: processGameLevel
 }
