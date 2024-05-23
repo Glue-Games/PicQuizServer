@@ -99,11 +99,6 @@ let matchJoin = function (context, logger, nakama, dispatcher, tick, state, pres
             logger.info("Real Player joined %v", player.playerProfile.name);
             gameState.realPlayers[nextPlayerIndex] = player;
         }
-        else {
-            logger.info("Bot Player joined");
-            //automatically set bot players as "loaded"
-            gameState.loaded[nextPlayerIndex] = true;
-        }
         let hostNumber = getHostIndex(gameState.players);
         //Host assignment
         if (hostNumber != -1)
@@ -277,7 +272,6 @@ function gameLoaded(message, gameState, dispatcher, nakama, logger) {
     let data = JSON.parse(nakama.binaryToString(message.data));
     let playerIndex = data.playerIndex;
     gameState.loaded[playerIndex] = true;
-    logger.info("is ready %v Is Game Ready %v", isPlayersReady(gameState.loaded), isGameLevelReady(gameState));
     if (isPlayersReady(gameState.loaded) && isGameLevelReady(gameState)) {
         dispatcher.broadcastMessage(7 /* OperationCode.GameReady */, JSON.stringify(gameState));
     }
@@ -350,9 +344,10 @@ function isFirstPlayer(players) {
         return false;
 }
 function isPlayersReady(loaded) {
-    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
-        if (loaded[playerIndex] == false)
+    for (let playerIndex = 0; playerIndex < MaxPlayers; playerIndex++) {
+        if (loaded[playerIndex] == false || loaded[playerIndex] == null)
             return false;
+    }
     return true;
 }
 function isGameLevelReady(gameState) {
@@ -379,7 +374,7 @@ const DurationAddBots = 3;
 const DurationRoundResults = 5;
 const DurationBattleEnding = 3;
 const NecessaryWins = 3;
-const MaxPlayers = 2;
+const MaxPlayers = 4;
 const SoloMaxPlayers = 1;
 const PlayerNotFound = -1;
 const CollectionUser = "User";
