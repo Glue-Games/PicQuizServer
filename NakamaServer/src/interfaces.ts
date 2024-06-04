@@ -5,6 +5,7 @@ interface MatchLabel
 
 interface GameState
 {
+    version: string,
     players: Player[],
     realPlayers: Player[]
     loaded: boolean[]

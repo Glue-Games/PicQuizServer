@@ -9,6 +9,7 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
     }
     var gameState: GameState =
     {
+        version: "",
         players: [],
         realPlayers: [],
         loaded: [],
@@ -32,9 +33,18 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
 let matchJoinAttempt: nkruntime.MatchJoinAttemptFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, tick: number, state: nkruntime.MatchState, presence: nkruntime.Presence, metadata: { [key: string]: any })
 {
     let gameState = state as GameState;
+    logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
+    if(state.version === "")
+    {
+        logger.info("Establishing match version to: %v", metadata["version"]);
+        state.version = metadata["version"];
+    }
+    let sameVersion = metadata["version"] === state.version;
+    let acceptMatch = gameState.scene == Scene.Lobby && sameVersion;
+    logger.info("Accept match? %v", acceptMatch);
     return {
         state: gameState,
-        accept: gameState.scene == Scene.Lobby,
+        accept: acceptMatch,
     }
 }
 

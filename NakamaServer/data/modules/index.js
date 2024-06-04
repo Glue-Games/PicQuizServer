@@ -44,6 +44,7 @@ let matchInit = function (context, logger, nakama, params) {
         category: ""
     };
     var gameState = {
+        version: "",
         players: [],
         realPlayers: [],
         loaded: [],
@@ -64,9 +65,17 @@ let matchInit = function (context, logger, nakama, params) {
 };
 let matchJoinAttempt = function (context, logger, nakama, dispatcher, tick, state, presence, metadata) {
     let gameState = state;
+    logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
+    if (state.version === "") {
+        logger.info("Establishing match version to: %v", metadata["version"]);
+        state.version = metadata["version"];
+    }
+    let sameVersion = metadata["version"] === state.version;
+    let acceptMatch = gameState.scene == 3 /* Scene.Lobby */ && sameVersion;
+    logger.info("Accept match? %v", acceptMatch);
     return {
         state: gameState,
-        accept: gameState.scene == 3 /* Scene.Lobby */,
+        accept: acceptMatch,
     };
 };
 let matchJoin = function (context, logger, nakama, dispatcher, tick, state, presences) {
