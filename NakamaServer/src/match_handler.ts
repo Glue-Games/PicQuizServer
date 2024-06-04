@@ -33,14 +33,22 @@ let matchInit: nkruntime.MatchInitFunction = function (context: nkruntime.Contex
 let matchJoinAttempt: nkruntime.MatchJoinAttemptFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, tick: number, state: nkruntime.MatchState, presence: nkruntime.Presence, metadata: { [key: string]: any })
 {
     let gameState = state as GameState;
-    logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
-    if(state.version === "")
-    {
-        logger.info("Establishing match version to: %v", metadata["version"]);
-        state.version = metadata["version"];
+    let acceptMatch = false;
+    if(metadata["version"]){
+        logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
+        if(state.version === "")
+        {
+            logger.info("Establishing match version to: %v", metadata["version"]);
+            state.version = metadata["version"];
+        }
+        let sameVersion = metadata["version"] === state.version;
+        logger.info("Matadata: %v VS State: %v", metadata["version"], state.version);
+        acceptMatch = gameState.scene == Scene.Lobby && sameVersion;
     }
-    let sameVersion = metadata["version"] === state.version;
-    let acceptMatch = gameState.scene == Scene.Lobby && sameVersion;
+    else{
+        logger.info("No meta data version received");
+        acceptMatch = gameState.scene == Scene.Lobby;
+    }
     logger.info("Accept match? %v", acceptMatch);
     return {
         state: gameState,
@@ -145,6 +153,7 @@ let matchLeave: nkruntime.MatchLeaveFunction = function (context: nkruntime.Cont
 
 let matchTerminate: nkruntime.MatchTerminateFunction = function (context: nkruntime.Context, logger: nkruntime.Logger, nakama: nkruntime.Nakama, dispatcher: nkruntime.MatchDispatcher, tick: number, state: nkruntime.MatchState, graceSeconds: number)
 {
+    state.version = "";
     return { state };
 }
 

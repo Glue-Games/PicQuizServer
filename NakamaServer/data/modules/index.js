@@ -65,13 +65,21 @@ let matchInit = function (context, logger, nakama, params) {
 };
 let matchJoinAttempt = function (context, logger, nakama, dispatcher, tick, state, presence, metadata) {
     let gameState = state;
-    logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
-    if (state.version === "") {
-        logger.info("Establishing match version to: %v", metadata["version"]);
-        state.version = metadata["version"];
+    let acceptMatch = false;
+    if (metadata["version"]) {
+        logger.info("%v attempted to join lobby match with metadata %v", context.username, metadata);
+        if (state.version === "") {
+            logger.info("Establishing match version to: %v", metadata["version"]);
+            state.version = metadata["version"];
+        }
+        let sameVersion = metadata["version"] === state.version;
+        logger.info("Matadata: %v VS State: %v", metadata["version"], state.version);
+        acceptMatch = gameState.scene == 3 /* Scene.Lobby */ && sameVersion;
     }
-    let sameVersion = metadata["version"] === state.version;
-    let acceptMatch = gameState.scene == 3 /* Scene.Lobby */ && sameVersion;
+    else {
+        logger.info("No meta data version received");
+        acceptMatch = gameState.scene == 3 /* Scene.Lobby */;
+    }
     logger.info("Accept match? %v", acceptMatch);
     return {
         state: gameState,
@@ -160,6 +168,7 @@ let matchLeave = function (context, logger, nakama, dispatcher, tick, state, pre
     return { state: gameState };
 };
 let matchTerminate = function (context, logger, nakama, dispatcher, tick, state, graceSeconds) {
+    state.version = "";
     return { state };
 };
 let matchSignal = function (context, logger, nk, dispatcher, tick, state, data) {
