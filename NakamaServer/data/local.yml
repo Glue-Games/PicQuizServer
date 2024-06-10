@@ -4,6 +4,13 @@ logger:
   stdout: true
   level: "info"
   file: "/nakama/data/logfile.log"
+match:
+  call_queue_size: 1024
+  deferred_queue_size: 1024
+  input_queue_size: 1024
+  join_attempt_queue_size: 1024
+  join_marker_deadline_ms: 500
+  label_update_interval_ms: 100
 socket:
   outgoing_queue_size: 64
   read_timeout_ms: 30000
@@ -19,5 +26,5 @@ runtime:
   js_entrypoint: "index.js"
 matchmaker:
   max_tickets: 5
-  interval_sec: 2
+  interval_sec: 3
   max_intervals: 1
