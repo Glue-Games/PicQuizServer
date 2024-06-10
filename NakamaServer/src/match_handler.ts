@@ -166,9 +166,10 @@ function processSoloMode(message: nkruntime.MatchMessage, gameState: GameState, 
     gameState.isSolo = true;
 }
 
-function processGameLevel(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama){
+function processGameLevel(message: nkruntime.MatchMessage, gameState: GameState, dispatcher: nkruntime.MatchDispatcher, nakama: nkruntime.Nakama, logger: nkruntime.Logger){
     let gameLevel: GameLevel = JSON.parse(nakama.binaryToString(message.data));
     gameState.level = gameLevel;
+    logger.info("Received level, broadcasting %v", gameState.level.caption);
     dispatcher.broadcastMessage(OperationCode.AssignLevel, JSON.stringify(gameLevel));
 }
 

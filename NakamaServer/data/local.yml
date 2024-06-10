@@ -4,6 +4,10 @@ logger:
   stdout: true
   level: "info"
   file: "/nakama/data/logfile.log"
+socket:
+  outgoing_queue_size: 64
+  read_timeout_ms: 30000
+  write_timeout_ms: 30000
 console:
   port: 7351
 social:
@@ -13,3 +17,7 @@ google_auth:
   credentials_json: '{"web":{"client_id":"289849779679-r86fo2bdfh2pqctind3jc9b1ul4vme7u.apps.googleusercontent.com","project_id":"Pic Wiz - Puzzle Games","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"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","redirect_uris":["https://pic-wiz---puzzle-games.firebaseapp.com/__/auth/handler"]}}'
 runtime:
   js_entrypoint: "index.js"
+matchmaker:
+  max_tickets: 5
+  interval_sec: 2
+  max_intervals: 1

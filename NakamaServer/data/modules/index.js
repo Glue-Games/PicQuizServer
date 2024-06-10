@@ -177,9 +177,10 @@ let matchSignal = function (context, logger, nk, dispatcher, tick, state, data) 
 function processSoloMode(message, gameState, dispatcher, nakama) {
     gameState.isSolo = true;
 }
-function processGameLevel(message, gameState, dispatcher, nakama) {
+function processGameLevel(message, gameState, dispatcher, nakama, logger) {
     let gameLevel = JSON.parse(nakama.binaryToString(message.data));
     gameState.level = gameLevel;
+    logger.info("Received level, broadcasting %v", gameState.level.caption);
     dispatcher.broadcastMessage(13 /* OperationCode.AssignLevel */, JSON.stringify(gameLevel));
 }
 function processMessages(messages, gameState, dispatcher, nakama, logger) {
