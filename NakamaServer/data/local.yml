@@ -26,5 +26,5 @@ runtime:
   js_entrypoint: "index.js"
 matchmaker:
   max_tickets: 5
-  interval_sec: 3
+  interval_sec: 1
   max_intervals: 1
