@@ -6,12 +6,11 @@ COPY package*.json .
 RUN npm install
 
 COPY tsconfig.json .
-COPY . .
-RUN npx tsc
+COPY src/* src/
+RUN npx tsc --build --verbose
 
 FROM heroiclabs/nakama:3.17.1
 
-COPY --from=node-builder /backend/build/*.js /nakama/data/modules/build/
-COPY local.yml .
+COPY --from=node-builder /backend/data/modules/*.js /nakama/data/modules/modules/
 COPY data data
 COPY data/local.yml /nakama/data/local.yml
