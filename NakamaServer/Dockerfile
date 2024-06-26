@@ -11,6 +11,6 @@ RUN npx tsc --build --verbose
 
 FROM heroiclabs/nakama:3.17.1
 
-COPY --from=node-builder /backend/data/modules/*.js /nakama/data/modules/
 COPY data data
+COPY --from=node-builder /backend/data/modules/*.js /nakama/data/modules/
 COPY data/local.yml /nakama/data/local.yml
